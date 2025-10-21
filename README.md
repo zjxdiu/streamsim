@@ -44,7 +44,7 @@ Some browser (like firefox) do not allow Authorization header to be included whi
 
 If your page is loaded in http and domain is not localhost or 127.0.0.1, then the screen capture won't work.
 
-**Solution:** Switch to https in your web server software, or use localhost / 127.0.0.1.
+**Solution:** Switch to https in your web server software, or use localhost / 127.0.0.1. If you have further issue with browser rejected mixed content, enable insecure content for this website in your browser's settings.
 
 3. Emotes are surrounded by \[brackets]
 
