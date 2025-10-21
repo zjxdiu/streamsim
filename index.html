@@ -1,0 +1,238 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Streaming Simulator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- NEW: Added a style for settings inputs -->
+    <style>
+        .settings-input {
+            width: 100%;
+            padding: 6px;
+            box-sizing: border-box;
+            background-color: #3a3a3d;
+            border: 1px solid #555;
+            color: #f0f0f0;
+            border-radius: 4px;
+        }
+        .color-system-error {
+            color: #ff6b6b; /* Red color for error messages */
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11.571 4.714h1.715v5.143H11.57V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z" />
+            </svg>
+            Streaming Simulator
+        </h1>
+        
+        <div class="main-content">
+            <div class="recorder-panel">
+                <div class="controls">
+                    <button id="startBtn" class="btn">Start Recording</button>
+                    <button id="stopBtn" class="btn" disabled>Stop Recording</button>
+                    <button id="streamVideoBtn" class="btn">Stream Video...</button>
+                    <button id="downloadBtn" class="btn" disabled>Download</button>
+                </div>
+                
+                <div class="status">
+                    <div id="recordingStatus">Ready to record</div>
+                    <div id="timer">00:00</div>
+                </div>
+                
+                <div class="viewer-count">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                        <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/>
+                    </svg>
+                    <span id="viewerCount">0</span> viewers
+                </div>
+                
+                <div class="preview-container">
+                    <video id="preview" autoplay muted></video>
+                    <div id="previewViewerCount" class="preview-viewer-count">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                            <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/>
+                        </svg>
+                        <span id="viewerCount">0</span>
+                    </div>
+                </div>
+                
+                <div class="stream-settings-container">
+                    <h3>Stream Settings</h3>
+                    <div class="setting-row">
+                        <span class="setting-label">AI Check Interval:</span>
+                        <select id="aiIntervalSelect">
+                            <option value="1">1 second</option>
+                            <option value="1.5">1.5 seconds</option>
+                            <option value="2">2 seconds</option>
+                            <option value="2.5">2.5 seconds</option>
+                            <option value="3">3 seconds</option>
+                            <option value="3.5" selected>3.5 seconds</option>
+                            <option value="5">5 seconds</option>
+                            <option value="7.5">7.5 seconds</option>
+                            <option value="10">10 seconds</option>
+                        </select>
+                    </div>
+                    <div class="setting-row">
+                        <span class="setting-label">Mute AI Chat</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="mutedChat">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-row">
+                        <span class="setting-label">Disable Donations</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="disableDonations">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- NEW: AI Provider Settings -->
+                <div class="stream-settings-container">
+                    <h3>AI Provider Settings</h3>
+                    <div class="settings-note">Settings are auto-saved to your browser.</div>
+                    <div class="setting-row">
+                        <span class="setting-label">API Base URL:</span>
+                        <input type="text" id="apiBaseUrl" class="settings-input" placeholder="e.g., https://api.openai.com/v1">
+                    </div>
+                    <div class="setting-row">
+                        <span class="setting-label">API Key:</span>
+                        <input type="password" id="apiKey" class="settings-input" placeholder="Your API Key">
+                    </div>
+                    <div class="setting-row">
+                        <span class="setting-label">Model Name:</span>
+                        <input type="text" id="apiModelName" class="settings-input" placeholder="e.g., gpt-4-vision-preview">
+                    </div>
+                </div>
+                
+                <!-- NEW: Streamer Information -->
+                <div class="stream-settings-container">
+                    <h3>Streamer Information</h3>
+                    <div class="setting-row">
+                        <span class="setting-label">Your Username:</span>
+                        <input type="text" id="streamerUsernameInput" class="settings-input" placeholder="Your streaming username">
+                    </div>
+                </div>
+                
+                <div class="chat-settings">
+                    <h3>Chat Style</h3>
+                    <div class="checkbox-container">
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="angryViewers">
+                            <label for="angryViewers">Angry Viewers</label>
+                        </div>
+                        
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="memeViewers">
+                            <label for="memeViewers">Meme Viewers</label>
+                        </div>
+                        
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="happyViewers">
+                            <label for="happyViewers">Happy Viewers</label>
+                        </div>
+                        
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="botViewers">
+                            <label for="botViewers">Bot Viewers</label>
+                        </div>
+                        
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="sillyViewers">
+                            <label for="sillyViewers">Silly Viewers</label>
+                        </div>
+                        
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="sadViewers">
+                            <label for="sadViewers">Sad Viewers</label>
+                        </div>
+                        
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="confusedViewers">
+                            <label for="confusedViewers">Confused Viewers</label>
+                        </div>
+                        
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="fanViewers">
+                            <label for="fanViewers">Fan Viewers</label>
+                        </div>
+                    </div>
+                    <div class="settings-note">These settings affect AI-generated chat content</div>
+                </div>
+                
+                <div class="poll-container">
+                    <h3>
+                        Stream Poll
+                        <button id="createPollBtn">Create Poll</button>
+                    </h3>
+                    
+                    <div id="pollFormContainer" style="display: none;">
+                        <form id="pollForm">
+                            <input type="text" name="pollTitle" placeholder="Poll Question" required>
+                            <div id="pollOptions">
+                                <div class="option-container">
+                                    <input type="text" name="option1" placeholder="Option 1" required>
+                                </div>
+                                <div class="option-container">
+                                    <input type="text" name="option2" placeholder="Option 2" required>
+                                </div>
+                            </div>
+                            <button type="button" id="addOptionBtn" class="add-option-btn">+ Add Option</button>
+                            <div class="option-container">
+                                <input type="number" name="duration" placeholder="Duration (seconds)" value="60" min="10" max="300" required>
+                            </div>
+                            <button type="submit" class="create-poll-btn">Start Poll</button>
+                        </form>
+                    </div>
+                    
+                    <div id="activePollContainer"></div>
+                </div>
+            </div>
+            
+            <div class="instructions">
+                <h2>How to Use</h2>
+                <ol>
+                    <li>Enter your API details and username in the settings panels. They will be saved automatically.</li>
+                    <li>Click "Start Recording" to begin screen recording.</li>
+                    <li>Choose which window or screen to share.</li>
+                    <li>When finished, click "Stop Recording".</li>
+                    <li>Preview your recording and click "Download" to save.</li>
+                    <li>Use "Stream Video..." to load a video file and generate chat for it.</li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="chat-panel">
+            <div class="chat-header">
+                <div class="chat-header-content">
+                    <h2>Stream Chat</h2>
+                </div>
+                <button id="popoutBtn" class="popout-btn">
+                    Popout
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M10 3v2H5v14h14v-5h2v7H3V3h7zm11 0v8h-2V6.413l-7.293 7.294-1.414-1.414L17.587 5H13V3h8z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-container">
+                <input type="text" id="chatInput" placeholder="Send a message...">
+                <button id="sendBtn">Chat</button>
+            </div>
+            <div class="chat-info">
+                <h3>Tip:</h3>
+                When recording, AI-generated chat messages will appear based on your screen content.
+            </div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
