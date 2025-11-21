@@ -46,14 +46,16 @@ If your page is loaded in http and domain is not localhost or 127.0.0.1, then th
 
 **Solution:** Switch to https in your web server software, or use localhost / 127.0.0.1. If you have further issue with browser rejected mixed content, enable insecure content for this website in your browser's settings.
 
-3. Emotes are surrounded by \[brackets]
+3. \[Solved] Emotes are surrounded by \[brackets]
 
-Known issue as I tried to change the format of emotes but didn't write the regex correctly. Should be fixed later on.
+Known issue as I tried to change the format of emotes but didn't write the regex correctly. ~~Should be fixed later on.~~ Fixed! No more brackets around emotes.
 
 4. I have a somewhat decent GPU, how about using local model?
 
 I use [LM studio](https://lmstudio.ai/) as backend API service and LLM inference. This software is designed to be easy-to-use, making it good for starter.
 
-As for models, since AI is developing in fast pace, definitely check out hugging face for latest model. But for now, `Qwen/Qwen2.5-VL-7B-Instruct` and `google/gemma-3-4b-it` with Q5_K_M quantization seems to work well enough for my RTX 4060 8GB (still not very good, but if you have better GPU you can use larger models).
+As for models, since AI is developing in fast pace, definitely check out hugging face for latest model. But for now, `Qwen/Qwen2.5-VL-7B-Instruct` and `google/gemma-3-4b-it` with Q5_K_M quantization seems to work well enough for my RTX 4060 8GB (still not very good, but if you have better GPU you can use larger models). Model smaller than 4B will likely produce really bad result.
+
+UPDATED: I got a new 16GB GPU now so more testing. New model Qwen3-VL-8B-Instruct is kinda decent, but doesn't seems to behave good enough with English. My next target is gemma-3-12b, since the 4b one did somewhat okay, I expect it to be one of the best models for low VRAM model that also provides fast speed. (I really like MoE though, they are so much faster than dense model, but at scale this small I don't expect to see a MoE that's as good as dense.)
 
 Keep in mind that inference speed is **really** important here. If it can't keep up, first try some speed hacks and tricks, then consider using smaller model, or set "AI Check Interval" to a larger value.
