@@ -3,8 +3,8 @@ let recordedChunks = [];
 let timerInterval;
 let startTime;
 let stream;
-let captureCanvas = document.createElement('canvas');
-let captureContext = captureCanvas.getContext('2d');
+//let captureCanvas = document.createElement('canvas');
+//let captureContext = captureCanvas.getContext('2d');
 let aiChatInterval;
 let isProcessingAIMessage = false;
 let pendingCaptureRequests = 0;
@@ -364,20 +364,29 @@ async function captureAndGenerateMessages() {
     if ((!preview.srcObject && !preview.src) || preview.videoWidth === 0 || preview.videoHeight === 0) {
         // If the video source isn't set OR if the video dimensions are not yet available,
         // skip this capture attempt. This prevents trying to capture a 0x0 frame.
-        console.log("Skipping AI capture: Video not ready.");
-		console.log("This is NOT a concern when seeing it first time starting stream.");
+        console.log("Skipping capture: Video not ready.");
+		console.log("This is NOT a concern if you just start the stream.");
         return; 
     }
     
     try {
         pendingCaptureRequests++;
         
-        // This part is now safe because we've already checked for valid dimensions.
-        captureCanvas.width = preview.videoWidth;
-        captureCanvas.height = preview.videoHeight;
+        // --- START OF FIX ---
+        // 1. 创建一个临时的、新的 canvas 和 context
+        const tempCanvas = document.createElement('canvas');
+        const tempContext = tempCanvas.getContext('2d');
+
+        // 2. 设置这个临时 canvas 的尺寸
+        tempCanvas.width = preview.videoWidth;
+        tempCanvas.height = preview.videoHeight;
         
-        captureContext.drawImage(preview, 0, 0, captureCanvas.width, captureCanvas.height);
-        const imageDataUrl = captureCanvas.toDataURL('image/jpeg', 0.7);
+        // 3. 在这个临时 canvas 上绘制当前视频帧
+        tempContext.drawImage(preview, 0, 0, tempCanvas.width, tempCanvas.height);
+        
+        // 4. 从这个临时 canvas 生成图像数据
+        const imageDataUrl = tempCanvas.toDataURL('image/jpeg', 0.7);
+        // --- END OF FIX ---
 
         // NEW: Add a final check to ensure the data URL is not empty
         if (imageDataUrl === 'data:,') {
@@ -449,16 +458,16 @@ async function getAIDescriptionsOfImage(imageDataUrl) {
                     Generate as unique usernames as possible – avoid common or overused examples.
                     ${streamerContext}
                     ${chatStylePrompt}
-                    You can include Twitch emotes in your messages using the format :emoteName:. Available emotes are:
-                    - :catJAM: - An animated cat bobbing its head (use for excitement, music, rhythm, vibing)
-                    - :Kappa: - The classic sarcastic face (use for sarcasm, skepticism, jokes)
-                    - :L: - Red L emote (use for failures, losses, disappointments)
-                    - :OMEGALUL: - Exaggerated laughing emote (use for extreme humor, laughing hard)
-                    - :poggers: - Surprised/excited frog face (use for amazement, excitement)
-                    - :PogU: - Surprised face emote (use for shock, amazement, excitement)
-                    - :W: - Green W emote (use for wins, successes, good plays)
-                    - :PepeLaugh: - Pepe the Frog laughing with tears (use for schadenfreude, when something funny/embarrassing happens to others)
-                    IMPORTANT: Don't mention the emote by name immediately after using it. Example: write ":W: let's go" NOT ":W: W let's go".
+                    You can include Twitch emotes in your messages using the format [emoteName]. Available emotes are:
+                    - [catJAM] - An animated cat bobbing its head (use for excitement, music, rhythm, vibing)
+                    - [Kappa] - The classic sarcastic face (use for sarcasm, skepticism, jokes)
+                    - [L] - Red L emote (use for failures, losses, disappointments)
+                    - [OMEGALUL] - Exaggerated laughing emote (use for extreme humor, laughing hard)
+                    - [poggers] - Surprised/excited frog face (use for amazement, excitement)
+                    - [PogU] - Surprised face emote (use for shock, amazement, excitement)
+                    - [W] - Green W emote (use for wins, successes, good plays)
+                    - [PepeLaugh] - Pepe the Frog laughing with tears (use for schadenfreude, when something funny/embarrassing happens to others)
+                    IMPORTANT: Don't mention the emote by name immediately after using it. Example: write "[W] let's go" NOT "[W] W let's go".
                     Respond directly with JSON, following this JSON schema, and no other text:
                     {
                         "messages": [
@@ -532,6 +541,10 @@ function addMessageToChat(username, message, colorClass) {
 }
 
 // Function to format messages with emotes
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function formatMessageWithEmotes(message) {
     const emotes = {
         'catJAM': 'catJAM.gif',
@@ -543,14 +556,18 @@ function formatMessageWithEmotes(message) {
         'W': 'W.png'
     };
     
-    // Replace emote codes with image tags
     Object.keys(emotes).forEach(emoteName => {
-        const emotePattern = new RegExp(`:${emoteName}:`, 'g');
-        message = message.replace(emotePattern, `<img src="${emotes[emoteName]}" alt="${emoteName}" class="chat-emote" />`);
+        // 匹配 [catJAM] 这样的形式
+        const emotePattern = new RegExp(`\\[${escapeRegExp(emoteName)}\\]`, 'g');
+        message = message.replace(
+            emotePattern,
+            `<img src="${emotes[emoteName]}" alt="${emoteName}" class="chat-emote" />`
+        );
     });
     
     return message;
 }
+
 
 function updateViewerCount() {
     const count = Math.floor(uniqueUsernames.size * 1.5);
@@ -610,16 +627,16 @@ async function generateAIResponseToUserMessage(userMessage, username) {
                     Have some viewers refer back to previous messages or topics from earlier in the stream.
                     If a topic was mentioned before, have some viewers continue that conversation thread.
                     ${streamerContext}
-                    You can include Twitch emotes in your messages using the format :emoteName:. Available emotes are:
-                    - :catJAM: - An animated cat bobbing its head (use for excitement, music, rhythm, vibing)
-                    - :Kappa: - The classic sarcastic face (use for sarcasm, skepticism, jokes)
-                    - :L: - Red L emote (use for failures, losses, disappointments)
-                    - :OMEGALUL: - Exaggerated laughing emote (use for extreme humor, laughing hard)
-                    - :poggers: - Surprised/excited frog face (use for amazement, excitement)
-                    - :PogU: - Surprised face emote (use for shock, amazement, excitement)
-                    - :W: - Green W emote (use for wins, successes, good plays)
-                    - :PepeLaugh: - Pepe the Frog laughing with tears (use for schadenfreude, when something funny/embarrassing happens to others)
-                    IMPORTANT: Don't mention the emote by name immediately after using it. Example: write ":W: let's go" NOT ":W: W let's go".
+                    You can include Twitch emotes in your messages using the format [emoteName]. Available emotes are:
+                    - [catJAM] - An animated cat bobbing its head (use for excitement, music, rhythm, vibing)
+                    - [Kappa] - The classic sarcastic face (use for sarcasm, skepticism, jokes)
+                    - [L] - Red L emote (use for failures, losses, disappointments)
+                    - [OMEGALUL] - Exaggerated laughing emote (use for extreme humor, laughing hard)
+                    - [poggers] - Surprised/excited frog face (use for amazement, excitement)
+                    - [PogU] - Surprised face emote (use for shock, amazement, excitement)
+                    - [W] - Green W emote (use for wins, successes, good plays)
+                    - [PepeLaugh] - Pepe the Frog laughing with tears (use for schadenfreude, when something funny/embarrassing happens to others)
+                    IMPORTANT: Don't mention the emote by name immediately after using it. Example: write "[W] let's go" NOT "[W] W let's go".
                     Respond directly with JSON, following this JSON schema, and no other text:
                     {
                         "messages": [
@@ -927,16 +944,16 @@ async function generatePollVoteMessage(optionText) {
                     The message should be brief (under 60 chars), conversational, and should reference the specific option.
                     Use casual chat expressions like "W", "L", "lmao", "lol", "pog", etc. where appropriate.
                     Generate both a username and message. Vary tone and style to create an authentic chat feel.
-                    You can include Twitch emotes in your messages using the format :emoteName:. Available emotes are:
-                    - :catJAM: - An animated cat bobbing its head (use for excitement, music, rhythm, vibing)
-                    - :Kappa: - The classic sarcastic face (use for sarcasm, skepticism, jokes)
-                    - :L: - Red L emote (use for failures, losses, disappointments)
-                    - :OMEGALUL: - Exaggerated laughing emote (use for extreme humor, laughing hard)
-                    - :poggers: - Surprised/excited frog face (use for amazement, excitement)
-                    - :PogU: - Surprised face emote (use for shock, amazement, excitement)
-                    - :W: - Green W emote (use for wins, successes, good plays)
-                    - :PepeLaugh: - Pepe the Frog laughing with tears (use for schadenfreude, when something funny/embarrassing happens to others)
-                    IMPORTANT: Don't mention the emote by name immediately after using it. Example: write ":W: let's go" NOT ":W: W let's go".
+                    You can include Twitch emotes in your messages using the format [emoteName]. Available emotes are:
+                    - [catJAM] - An animated cat bobbing its head (use for excitement, music, rhythm, vibing)
+                    - [Kappa] - The classic sarcastic face (use for sarcasm, skepticism, jokes)
+                    - [L] - Red L emote (use for failures, losses, disappointments)
+                    - [OMEGALUL] - Exaggerated laughing emote (use for extreme humor, laughing hard)
+                    - [poggers] - Surprised/excited frog face (use for amazement, excitement)
+                    - [PogU] - Surprised face emote (use for shock, amazement, excitement)
+                    - [W] - Green W emote (use for wins, successes, good plays)
+                    - [PepeLaugh] - Pepe the Frog laughing with tears (use for schadenfreude, when something funny/embarrassing happens to others)
+                    IMPORTANT: Don't mention the emote by name immediately after using it. Example: write "[W] let's go" NOT "[W] W let's go".
                     Respond directly with JSON, following this JSON schema, and no other text:
                     {
                         "username": "username1",
@@ -1098,16 +1115,16 @@ async function generatePollMessages(title, options) {
                     Use previously established usernames when appropriate: ${previousUsernames.slice(-15).join(", ")}
                     If viewers previously showed preferences or opinions, have them be consistent with those in poll reactions.
                     ${streamerContext}
-                    You can include Twitch emotes in your messages using the format :emoteName:. Available emotes are:
-                    - :catJAM: - An animated cat bobbing its head (use for excitement, music, rhythm, vibing)
-                    - :Kappa: - The classic sarcastic face (use for sarcasm, skepticism, jokes)
-                    - :L: - Red L emote (use for failures, losses, disappointments)
-                    - :OMEGALUL: - Exaggerated laughing emote (use for extreme humor, laughing hard)
-                    - :poggers: - Surprised/excited frog face (use for amazement, excitement)
-                    - :PogU: - Surprised face emote (use for shock, amazement, excitement)
-                    - :W: - Green W emote (use for wins, successes, good plays)
-                    - :PepeLaugh: - Pepe the Frog laughing with tears (use for schadenfreude, when something funny/embarrassing happens to others)
-                    IMPORTANT: Don't mention the emote by name immediately after using it. Example: write ":W: let's go" NOT ":W: W let's go".
+                    You can include Twitch emotes in your messages using the format [emoteName]. Available emotes are:
+                    - [catJAM] - An animated cat bobbing its head (use for excitement, music, rhythm, vibing)
+                    - [Kappa] - The classic sarcastic face (use for sarcasm, skepticism, jokes)
+                    - [L] - Red L emote (use for failures, losses, disappointments)
+                    - [OMEGALUL] - Exaggerated laughing emote (use for extreme humor, laughing hard)
+                    - [poggers] - Surprised/excited frog face (use for amazement, excitement)
+                    - [PogU] - Surprised face emote (use for shock, amazement, excitement)
+                    - [W] - Green W emote (use for wins, successes, good plays)
+                    - [PepeLaugh] - Pepe the Frog laughing with tears (use for schadenfreude, when something funny/embarrassing happens to others)
+                    IMPORTANT: Don't mention the emote by name immediately after using it. Example: write "[W] let's go" NOT "[W] W let's go".
                     Respond directly with JSON, following this JSON schema, and no other text:
                     {
                         "messages": [
@@ -1159,16 +1176,16 @@ async function generatePollResultMessages(winningOption, winningIndex) {
                     Have some viewers celebrate or complain based on whether their preferred option won.
                     Use previously established usernames when appropriate: ${previousUsernames.slice(-15).join(", ")}
                     Maintain continuity with how viewers were talking about the poll earlier.
-                    You can include Twitch emotes in your messages using the format :emoteName:. Available emotes are:
-                    - :catJAM: - An animated cat bobbing its head (use for excitement, music, rhythm, vibing)
-                    - :Kappa: - The classic sarcastic face (use for sarcasm, skepticism, jokes)
-                    - :L: - Red L emote (use for failures, losses, disappointments)
-                    - :OMEGALUL: - Exaggerated laughing emote (use for extreme humor, laughing hard)
-                    - :poggers: - Surprised/excited frog face (use for amazement, excitement)
-                    - :PogU: - Surprised face emote (use for shock, amazement, excitement)
-                    - :W: - Green W emote (use for wins, successes, good plays)
-                    - :PepeLaugh: - Pepe the Frog laughing with tears (use for schadenfreude, when something funny/embarrassing happens to others)
-                    IMPORTANT: Don't mention the emote by name immediately after using it. Example: write ":W: let's go" NOT ":W: W let's go".
+                    You can include Twitch emotes in your messages using the format [emoteName]. Available emotes are:
+                    - [catJAM] - An animated cat bobbing its head (use for excitement, music, rhythm, vibing)
+                    - [Kappa] - The classic sarcastic face (use for sarcasm, skepticism, jokes)
+                    - [L] - Red L emote (use for failures, losses, disappointments)
+                    - [OMEGALUL] - Exaggerated laughing emote (use for extreme humor, laughing hard)
+                    - [poggers] - Surprised/excited frog face (use for amazement, excitement)
+                    - [PogU] - Surprised face emote (use for shock, amazement, excitement)
+                    - [W] - Green W emote (use for wins, successes, good plays)
+                    - [PepeLaugh] - Pepe the Frog laughing with tears (use for schadenfreude, when something funny/embarrassing happens to others)
+                    IMPORTANT: Don't mention the emote by name immediately after using it. Example: write "[W] let's go" NOT "[W] W let's go".
                     Respond directly with JSON, following this JSON schema, and no other text:
                     {
                         "messages": [
@@ -1288,16 +1305,16 @@ async function generateDonation() {
                     content: `Generate a simulated donation for a livestream. Include a username, donation amount (either $1-$100 or 100-10000 bits), and a short message.
                     For bits, use the format "X bits" and for dollars use the format "$X". Choose randomly between bits and dollars.
                     Keep the donation message brief and realistic. Users might express appreciation, ask a question, make a request, or just say something funny.
-                    You can include Twitch emotes in your messages using the format :emoteName:. Available emotes are:
-                    - :catJAM: - An animated cat bobbing its head (use for excitement, music, rhythm, vibing)
-                    - :Kappa: - The classic sarcastic face (use for sarcasm, skepticism, jokes)
-                    - :L: - Red L emote (use for failures, losses, disappointments)
-                    - :OMEGALUL: - Exaggerated laughing emote (use for extreme humor, laughing hard)
-                    - :poggers: - Surprised/excited frog face (use for amazement, excitement)
-                    - :PogU: - Surprised face emote (use for shock, amazement, excitement)
-                    - :W: - Green W emote (use for wins, successes, good plays)
-                    - :PepeLaugh: - Pepe the Frog laughing with tears (use for schadenfreude, when something funny/embarrassing happens to others)
-                    IMPORTANT: Don't mention the emote by name immediately after using it. Example: write ":W: let's go" NOT ":W: W let's go".
+                    You can include Twitch emotes in your messages using the format [emoteName]. Available emotes are:
+                    - [catJAM] - An animated cat bobbing its head (use for excitement, music, rhythm, vibing)
+                    - [Kappa] - The classic sarcastic face (use for sarcasm, skepticism, jokes)
+                    - [L] - Red L emote (use for failures, losses, disappointments)
+                    - [OMEGALUL] - Exaggerated laughing emote (use for extreme humor, laughing hard)
+                    - [poggers] - Surprised/excited frog face (use for amazement, excitement)
+                    - [PogU] - Surprised face emote (use for shock, amazement, excitement)
+                    - [W] - Green W emote (use for wins, successes, good plays)
+                    - [PepeLaugh] - Pepe the Frog laughing with tears (use for schadenfreude, when something funny/embarrassing happens to others)
+                    IMPORTANT: Don't mention the emote by name immediately after using it. Example: write "[W] let's go" NOT "[W] W let's go".
                     Respond directly with JSON, following this JSON schema, and no other text:
                     {
                         "username": "string",
@@ -1349,16 +1366,16 @@ async function generateDonationReactions(donorUsername, amount, donationType) {
                     Use previously established usernames when appropriate: ${previousUsernames.slice(-15).join(", ")}
                     If certain viewers have shown consistent behavior or personalities, have them react consistently.
                     Reference any ongoing discussions or topics when reacting to the donation.
-                    You can include Twitch emotes in your messages using the format :emoteName:. Available emotes are:
-                    - :catJAM: - An animated cat bobbing its head (use for excitement, music, rhythm, vibing)
-                    - :Kappa: - The classic sarcastic face (use for sarcasm, skepticism, jokes)
-                    - :L: - Red L emote (use for failures, losses, disappointments)
-                    - :OMEGALUL: - Exaggerated laughing emote (use for extreme humor, laughing hard)
-                    - :poggers: - Surprised/excited frog face (use for amazement, excitement)
-                    - :PogU: - Surprised face emote (use for shock, amazement, excitement)
-                    - :W: - Green W emote (use for wins, successes, good plays)
-                    - :PepeLaugh: - Pepe the Frog laughing with tears (use for schadenfreude, when something funny/embarrassing happens to others)
-                    IMPORTANT: Don't mention the emote by name immediately after using it. Example: write ":W: let's go" NOT ":W: W let's go".
+                    You can include Twitch emotes in your messages using the format [emoteName]. Available emotes are:
+                    - [catJAM] - An animated cat bobbing its head (use for excitement, music, rhythm, vibing)
+                    - [Kappa] - The classic sarcastic face (use for sarcasm, skepticism, jokes)
+                    - [L] - Red L emote (use for failures, losses, disappointments)
+                    - [OMEGALUL] - Exaggerated laughing emote (use for extreme humor, laughing hard)
+                    - [poggers] - Surprised/excited frog face (use for amazement, excitement)
+                    - [PogU] - Surprised face emote (use for shock, amazement, excitement)
+                    - [W] - Green W emote (use for wins, successes, good plays)
+                    - [PepeLaugh] - Pepe the Frog laughing with tears (use for schadenfreude, when something funny/embarrassing happens to others)
+                    IMPORTANT: Don't mention the emote by name immediately after using it. Example: write "[W] let's go" NOT "[W] W let's go".
                     Respond directly with JSON, following this JSON schema, and no other text:
                     {
                         "messages": [
